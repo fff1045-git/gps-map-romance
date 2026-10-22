@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env.local
+.env.*.local
+*.log
+# 이미지 원본(Codex 생성)과 로그. 최종본은 public/characters
+art/characters/raw/
+art/characters/v1/
+art/characters/out/
