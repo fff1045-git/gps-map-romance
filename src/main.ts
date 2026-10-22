@@ -12,7 +12,7 @@ import { createGps, getStartFix, isNativeApp } from './gps/platform';
 import { PositionFilter } from './gps/PositionFilter';
 import { Simulator } from './gps/Simulator';
 import { createProvider } from './map/createProvider';
-import { heroImage, type Hero } from './romance/heroes';
+import { heroImage, josa, type Hero } from './romance/heroes';
 import { runMeeting } from './romance/Meeting';
 import { STORIES } from './romance/story';
 
@@ -168,7 +168,7 @@ async function main() {
       const res = await runMeeting({ hero, episode, episodeNo: r.episode, affection: r.affection, place: r.place }).finally(
         () => (inMeeting = false),
       );
-      if (!res.completed) return hud.toast(`${hero.short}와의 이야기는 다음에 이어서 봐요`);
+      if (!res.completed) return hud.toast(`${josa(hero.short, '과/와')}의 이야기는 다음에 이어서 봐요`);
       state.finishMeeting(hero.id, r.place, res, Date.now());
       hud.pop(res.ending === 'happy' ? '💖' : '💗', provider.latLngToScreen(r.place.pos));
       return;
@@ -184,7 +184,7 @@ async function main() {
         hud.toast('아직 내 위치를 몰라요');
         break;
       case 'resting':
-        hud.toast(`${hero.short}는 지금 쉬는 중이에요`);
+        hud.toast(`${josa(hero.short, '은/는')} 지금 쉬는 중이에요`);
         break;
       default:
         hud.toast('지금은 만날 수 없어요');
@@ -240,7 +240,7 @@ async function main() {
     for (const id of next) shown.add(id);
 
     if (!state.inPlayArea) hud.setNear('🇰🇷 국내에서만 만날 수 있어요', 'warn');
-    else if (hot) hud.setNear(`💗 ${hot.short}를 만날 수 있어요`, 'hot');
+    else if (hot) hud.setNear(`💗 ${josa(hot.short, '을/를')} 만날 수 있어요`, 'hot');
     else if (nearest) hud.setNear(`${nearest.hero.short}까지 ${Math.round(nearest.d)}m`);
     else hud.setNear('모두 쉬는 중이에요');
   };

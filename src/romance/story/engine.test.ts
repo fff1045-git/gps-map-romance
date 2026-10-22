@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { StoryRunner } from './engine';
 import type { Episode } from './types';
 import { STORIES } from './index';
-import { EPISODES, HAPPY_THRESHOLD, HEROES } from '../heroes';
+import { EPISODES, HAPPY_THRESHOLD, HEROES, josa } from '../heroes';
 
 const vars = { place: '테스트 카페', me: '손님' };
 
@@ -144,5 +144,16 @@ describe('이야기 데이터', () => {
       walk(e.friend ?? []);
     }
     expect([...faces].sort()).toEqual(['neutral', 'shy', 'smile']);
+  });
+});
+
+describe('josa', () => {
+  it('받침에 따라 조사를 고른다', () => {
+    expect(josa('서윤', '을/를')).toBe('서윤을');
+    expect(josa('채아', '을/를')).toBe('채아를');
+    expect(josa('도하', '과/와')).toBe('도하와');
+    expect(josa('한서윤', '과/와')).toBe('한서윤과');
+    expect(josa('서윤', '은/는')).toBe('서윤은');
+    expect(josa('도하', '이/가')).toBe('도하가');
   });
 });

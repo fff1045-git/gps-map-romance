@@ -95,12 +95,10 @@ export class Hud {
         const li = document.createElement('li');
         li.className = 'hero-card';
         li.style.setProperty('--hero', hero.color);
-        const seen = save.episode > 1 || !!save.ending;
-        const name = seen ? hero.name : '???';
         const ep = Math.min(save.episode - 1, EPISODES);
         li.innerHTML =
-          `<div class="face" style="background-image:url('${heroImage(hero.id, 'neutral')}')${seen ? '' : ';filter:brightness(0) opacity(.5)'}"></div>` +
-          `<h3>${name}<small>${hero.age}세 · ${hero.job}</small></h3>` +
+          `<div class="face" style="background-image:url('${heroImage(hero.id, 'neutral')}')"></div>` +
+          `<h3>${hero.name}<small>${hero.age}세 · ${hero.job}</small></h3>` +
           `<div class="stage"><b>${stageLabel(save.affection, save.ending)}</b> · 호감도 ${save.affection} · ${ep}/${EPISODES}화</div>` +
           `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${save.affection}"><i style="width:${save.affection}%"></i></div>` +
           `<div class="row"><span class="where">${whereText(hero, status, distanceM)}</span></div>`;

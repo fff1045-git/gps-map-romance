@@ -80,7 +80,7 @@ export function heroImage(id: string, face: Face): string {
 }
 
 export function endingImage(id: string): string {
-  return `${import.meta.env.BASE_URL}characters/${id}_ending.png`;
+  return `${import.meta.env.BASE_URL}characters/${id}_ending.jpg`;
 }
 
 /** 호감도 단계. 하한 오름차순. 연인은 해피 엔딩을 본 뒤에만. */
@@ -100,4 +100,12 @@ export function stageLabel(affection: number, ending?: 'happy' | 'friend'): stri
   let label: string = STAGES[0].label;
   for (const s of STAGES) if (affection >= s.min) label = s.label;
   return label;
+}
+
+/** 이름 뒤 조사. josa('서윤', '을/를') → '서윤을', josa('채아', '을/를') → '채아를'. 받침 있는 쪽이 앞. */
+export function josa(word: string, pair: '을/를' | '이/가' | '은/는' | '과/와'): string {
+  const [withFinal, without] = pair.split('/');
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
+  return word + (hasFinal ? withFinal : without);
 }

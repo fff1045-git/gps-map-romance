@@ -140,6 +140,29 @@ describe('GameState', () => {
     expect(s.beginMeeting('doha', T0 + 5 * HOUR)).toMatchObject({ ok: false, reason: 'done' });
   });
 
+  it('가상 지점으로 걸어가는 동안 격자 칸을 넘어도 장소가 그대로다', () => {
+    const s = new GameState(new MemoryStore());
+    s.setPlayer(fix());
+    const st = s.status('chaea', T0);
+    if (st.state !== 'here') throw new Error();
+    for (let t = 0.1; t <= 1; t += 0.1) {
+      const p = { lat: SEOUL.lat + (st.place.pos.lat - SEOUL.lat) * t, lng: SEOUL.lng + (st.place.pos.lng - SEOUL.lng) * t };
+      s.setPlayer(fix(p));
+      expect(s.status('chaea', T0)).toEqual(st);
+    }
+    expect(s.beginMeeting('chaea', T0).ok).toBe(true);
+  });
+
+  it('실제 장소 후보가 나중에 오면 가상 지점에서 옮긴다', () => {
+    const s = new GameState(new MemoryStore());
+    s.setPlayer(fix());
+    const before = s.status('seoyun', T0);
+    expect(before.state === 'here' && before.place.virtual).toBe(true);
+    s.setCandidates('cafe', cafes);
+    const after = s.status('seoyun', T0);
+    expect(after.state === 'here' && after.place.virtual).toBeFalsy();
+  });
+
   it('국외에서는 나타나지 않는다', () => {
     const s = new GameState(new MemoryStore());
     s.setPlayer(fix({ lat: 35.6812, lng: 139.7671 })); // 도쿄

@@ -2,7 +2,7 @@ import './meeting.css';
 import { seededRandom } from '../core/random';
 import type { Place } from '../game/placement';
 import { cameraErrorMessage, readArPref, startCamera, stopCamera, writeArPref } from './camera';
-import { FACES, heroImage, PLACE_EMOJI, stageLabel, type Face, type Hero } from './heroes';
+import { endingImage, FACES, heroImage, josa, PLACE_EMOJI, stageLabel, type Face, type Hero } from './heroes';
 import { StoryRunner, type Frame } from './story/engine';
 import type { Episode } from './story/types';
 
@@ -31,6 +31,8 @@ export interface MeetingResult {
 }
 
 const TYPE_MS = 28;
+/** 선택지가 뜬 직전 탭이 선택지를 누르지 않게, 뜬 뒤 잠깐은 누름을 무시한다(ms). */
+const CHOICE_GUARD_MS = 400;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -65,6 +67,7 @@ class MeetingView {
   private typing: { full: string; timer: ReturnType<typeof setInterval> } | null = null;
   private shownFace: Face | null = null;
   private choiceNo = 0;
+  private choicesAt = 0;
   private msgTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
@@ -87,7 +90,7 @@ class MeetingView {
   private build() {
     const { hero, place, episode, episodeNo } = this.opts;
     this.root.setAttribute('role', 'dialog');
-    this.root.setAttribute('aria-label', `${hero.name}와의 만남`);
+    this.root.setAttribute('aria-label', `${josa(hero.name, '과/와')}의 만남`);
     this.root.dataset.place = place.kind;
     this.root.style.setProperty('--hero', hero.color);
     this.video.muted = true;
@@ -198,11 +201,14 @@ class MeetingView {
         const b = el('button', 'mt-choice', options[idx]);
         b.type = 'button';
         b.dataset.key = String(k + 1);
-        b.onclick = () => this.pick(idx);
+        b.onclick = () => {
+          if (performance.now() - this.choicesAt >= CHOICE_GUARD_MS) this.pick(idx);
+        };
         return b;
       }),
     );
     this.choices.hidden = false;
+    this.choicesAt = performance.now();
     (this.choices.firstElementChild as HTMLElement | null)?.focus();
   }
 
@@ -250,19 +256,29 @@ class MeetingView {
     const card = el('div', 'mt-end');
     const gained = r.affection - this.startAffection;
     const title =
-      r.ending === 'happy' ? '💖 해피 엔딩' : r.ending === 'friend' ? '🤝 친구 엔딩' : `${hero.short}와 조금 더 가까워졌다`;
+      r.ending === 'happy' ? '💖 해피 엔딩' : r.ending === 'friend' ? '🤝 친구 엔딩' : `${josa(hero.short, '과/와')} 조금 더 가까워졌다`;
+    if (r.ending === 'happy') {
+      const cg = el('img', 'mt-cg');
+      cg.src = endingImage(hero.id);
+      cg.alt = `${hero.short} 엔딩`;
+      card.append(cg);
+    }
     card.append(
       el('h2', '', title),
       el('p', '', `호감도 ${this.startAffection} → ${r.affection} (${gained >= 0 ? '+' : ''}${gained})`),
       el('p', 'mt-stage', stageLabel(r.affection, r.ending)),
     );
-    if (!r.ending) card.append(el('p', 'mt-sub', `${hero.short}는 한 시간쯤 뒤 다른 곳에 나타나요.`));
+    if (!r.ending) card.append(el('p', 'mt-sub', `${josa(hero.short, '은/는')} 한 시간쯤 뒤 다른 곳에 나타나요.`));
     else if (r.ending === 'friend') card.append(el('p', 'mt-sub', '호감도 60 이상이면 다른 엔딩이 열려요. 💌 인연 → 진행도 초기화로 다시 할 수 있어요.'));
     const ok = el('button', 'mt-choice', '지도로 돌아가기');
     ok.type = 'button';
-    ok.onclick = () => this.close({ completed: true, affection: r.affection, faces: [...r.faces], ending: r.ending });
+    ok.onclick = () => {
+      if (performance.now() - this.choicesAt < CHOICE_GUARD_MS) return;
+      this.close({ completed: true, affection: r.affection, faces: [...r.faces], ending: r.ending });
+    };
     card.append(ok);
     this.choices.replaceChildren(card);
+    this.choicesAt = performance.now();
     ok.focus();
   }
 

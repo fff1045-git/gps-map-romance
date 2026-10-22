@@ -7,6 +7,8 @@ import { emptySave, newHeroSave, type HeroSave, type SaveData, type SaveStore } 
 
 /** 마지막 위치를 다시 저장하기 전에 이만큼은 움직여야 한다(m). 매 측정마다 쓰지 않기 위해. */
 const LAST_KNOWN_MIN_MOVE_M = 25;
+/** 정해 둔 장소에서 이보다 멀어지면 새로 고른다(m). 그 안에서는 걸어가는 동안 장소가 바뀌지 않는다. */
+const REPLACE_AFTER_M = 2000;
 
 export type HeroStatus =
   | { state: 'here'; place: Place }
@@ -33,6 +35,8 @@ export class GameState {
   private data: SaveData;
   private _player: PlayerFix | null = null;
   private candidates: Partial<Record<PlaceKind, readonly Place[]>> = {};
+  /** 캐릭터별로 이번 시간 창에 정해 둔 장소(메모리만). */
+  private placed = new Map<string, { window: number; after?: string; place: Place }>();
   private listeners = new Set<() => void>();
 
   constructor(
@@ -75,6 +79,10 @@ export class GameState {
   /** 주변 실제 장소 후보(장소 유형별). 빈 배열이면 가상 지점을 쓴다. */
   setCandidates(kind: PlaceKind, places: readonly Place[]): void {
     this.candidates[kind] = places.filter((p) => isInKorea(p.pos));
+    // 가상 지점에 있던 캐릭터는 실제 장소가 생기면 그리로 옮긴다.
+    if (this.candidates[kind]!.length) {
+      for (const [id, m] of this.placed) if (m.place.kind === kind && m.place.virtual) this.placed.delete(id);
+    }
     this.emit();
   }
 
@@ -88,9 +96,19 @@ export class GameState {
     }
     if (!hero || !this._player || !isInKorea(this._player.pos)) return { state: 'unknown' };
     const window = placementWindow(now, this.placementConfig);
+    const memo = this.placed.get(hero.id);
+    if (
+      memo &&
+      memo.window === window &&
+      memo.after === p.lastPlaceId &&
+      distanceMeters(this._player.pos, memo.place.pos) <= REPLACE_AFTER_M
+    ) {
+      return { state: 'here', place: memo.place };
+    }
     const place =
       pickPlace(hero.id, window, this.candidates[hero.placeKind] ?? [], p.lastPlaceId, this.placementConfig) ??
       virtualPlace(hero.id, hero.placeKind, this._player.pos, window, p.lastPlaceId, this.placementConfig);
+    this.placed.set(hero.id, { window, after: p.lastPlaceId, place });
     return { state: 'here', place };
   }
 
@@ -144,6 +162,7 @@ export class GameState {
 
   /** 진행을 모두 지운다. 마지막 위치는 남긴다. */
   reset(): void {
+    this.placed.clear();
     this.data = { ...emptySave(), lastKnown: this.data.lastKnown };
     this.store.save(this.data);
     this.emit();
