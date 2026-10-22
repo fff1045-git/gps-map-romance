@@ -315,9 +315,11 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hero-card .stage b { color: var(--hero); }
 .bar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--hero); border-radius: inherit; }
-.hero-card .where { font-size: 13px; }
+.hero-card .where { font-size: 13px; min-width: 0; }
 .hero-card .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .hero-card .row button {
+  flex: none;
+  white-space: nowrap;
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
