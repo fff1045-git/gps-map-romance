@@ -364,6 +364,54 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 }
 
 .roadview { height: 70vh; display: flex; flex-direction: column; }
+/* 로드뷰 사진 속 캐릭터(발밑이 장소 좌표) */
+.rv-marker { pointer-events: none; }
+.rv-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  isolation: isolate; /* 그림자(z-index -1)가 로드뷰 뒤로 숨지 않게 */
+}
+/* 그림 아래끝이 장소 좌표의 땅에 닿는다(yAnchor 1). 허벅지에서 잘린 아래쪽은 흐리게 풀어 땅에 묻힌 듯 보이게 한다. */
+.rv-hero img {
+  height: var(--h, 240px);
+  width: auto;
+  max-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+}
+/* 발밑 그림자 */
+.rv-hero::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--h, 240px) * -0.03);
+  width: calc(var(--h, 240px) * 0.42);
+  height: calc(var(--h, 240px) * 0.07);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), transparent);
+  z-index: -1;
+}
+.rv-hero span {
+  order: -1;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--hero, var(--accent));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  animation: bob 1.6s ease-in-out infinite;
+}
 #roadview-view { flex: 1; border-radius: 12px; overflow: hidden; background: #000; }
 
 .fatal {

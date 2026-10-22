@@ -3,7 +3,7 @@ import { readConfig } from './app/config';
 import { distanceMeters, type LatLng } from './core/geo';
 import { KOREA_OVERVIEW } from './core/korea';
 import { Hud } from './app/hud';
-import { GameState } from './game/GameState';
+import { GameState, type HeroStatus } from './game/GameState';
 import { PlaceFinder } from './game/PlaceFinder';
 import type { PlayerFix } from './game/rules';
 import { LocalStorageStore } from './game/storage';
@@ -11,6 +11,7 @@ import type { LocationSource } from './gps/LocationSource';
 import { createGps, getStartFix, isNativeApp } from './gps/platform';
 import { PositionFilter } from './gps/PositionFilter';
 import { Simulator } from './gps/Simulator';
+import type { MarkerSpec } from './map/MapProvider';
 import { createProvider } from './map/createProvider';
 import { heroImage, josa, type Hero } from './romance/heroes';
 import { runMeeting } from './romance/Meeting';
@@ -18,6 +19,15 @@ import { STORIES } from './romance/story';
 
 const PLAYER_ID = 'player';
 const HERO_PREFIX = 'hero:';
+
+/**
+ * 로드뷰 속 캐릭터 키(px). 멀수록 작게(대략 거리에 반비례), 너무 작거나 크지 않게.
+ * 로드뷰는 발밑(땅 좌표)을 화면 가운데에 두고 열리므로, 이름표까지 보이게 화면 높이의 40%를 넘지 않는다.
+ */
+function roadviewHeight(distanceM: number, viewH: number): number {
+  const max = Math.max(120, viewH * 0.4);
+  return Math.round(Math.min(max, Math.max(120, 3200 / Math.max(1, distanceM))));
+}
 
 /** 시뮬레이터에서 지도를 눌렀을 때 이보다 멀면 걸어가지 않고 순간이동한다(m). */
 const TELEPORT_OVER_M = 300;
@@ -254,9 +264,44 @@ async function main() {
     if (confirm('모든 캐릭터와의 진행을 지울까요?')) state.reset();
   });
 
+  /**
+   * 로드뷰 사진 속에 세울 캐릭터: 지금 만날 수 있는(40m 안, 정확도 충분) 캐릭터만. 거리는 표시하지 않는다.
+   * 가까운 순으로 넘겨서 로드뷰가 가장 가까운 캐릭터 쪽을 보며 열린다. 누르면 로드뷰를 닫고 만남.
+   */
+  const roadviewHeroes = (at: LatLng, viewH: number): MarkerSpec[] => {
+    const now = Date.now();
+    return state.heroes
+      .map((hero) => ({ hero, s: state.status(hero.id, now) }))
+      .filter((x): x is { hero: Hero; s: Extract<HeroStatus, { state: 'here' }> } => x.s.state === 'here')
+      .filter(({ s }) => state.check(s.place).ok)
+      .map(({ hero, s }) => ({ hero, place: s.place, d: distanceMeters(at, s.place.pos) }))
+      .sort((a, b) => a.d - b.d)
+      .map(({ hero, place, d }) => ({
+        id: HERO_PREFIX + hero.id,
+        pos: place.pos,
+        zIndex: Math.round(1000 - d),
+        html:
+          `<button class="rv-hero" type="button" aria-label="${hero.short} 만나기" ` +
+          `style="--h:${roadviewHeight(d, viewH)}px;--hero:${hero.color}"><img src="${heroImage(hero.id, 'neutral')}" alt="" draggable="false">` +
+          `<span>${hero.short}</span></button>`,
+        onClick: () => {
+          hud.closeRoadview();
+          void meet(hero);
+        },
+      }));
+  };
+
   if (provider.showStreetView) {
     const show = provider.showStreetView.bind(provider);
-    hud.enableRoadview((el) => show(state.player?.pos ?? provider.getCenter(), el));
+    hud.enableRoadview(async (el) => {
+      const at = state.player?.pos ?? provider.getCenter();
+      const heroes = roadviewHeroes(at, el.clientHeight || window.innerHeight * 0.6);
+      const opened = await show(at, el, heroes);
+      if (opened && !heroes.length) {
+        hud.toast(`로드뷰에는 ${state.meetConfig.radiusM}m 안에 있는 캐릭터만 보여요. 더 가까이 가 보세요`, 3000);
+      }
+      return opened;
+    });
   }
 
   // 개발 중 콘솔에서 확인할 수 있게(예: __game.state.skipRest())
