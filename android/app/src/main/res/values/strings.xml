@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GPS 지도 연애</string>
+    <string name="title_activity_main">GPS 지도 연애</string>
+    <string name="package_name">com.gpsromance.app</string>
+    <string name="custom_url_scheme">com.gpsromance.app</string>
+</resources>
